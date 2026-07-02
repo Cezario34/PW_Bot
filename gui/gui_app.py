@@ -96,29 +96,29 @@ class BotGui:
                     wb.attack()
                     self.log('Начинаю бить моба')
                     time.sleep(3)
-                    self.log("Подобрал лут")
-                    self.log(f"бью моба по счету {count_mobs}")
+                    # self.log("Подобрал лут")
+                    # self.log(f"бью моба по счету {count_mobs}")
 
 
                     if not has_target(gw):
-                        wb.press_loot()
-                        time.sleep(1)
-                        wb.press_loot()
+                        # wb.press_loot()
+                        # time.sleep(1)
+                        # wb.press_loot()
                         self.log("Подобрал лут")
                         self.log(f"Убито мобов {count_mobs}")
                 else:
-                    wb.press_loot()
-                    time.sleep(1)
-                    wb.press_loot()
+                    # wb.press_loot()
+                    # time.sleep(1)
+                    # wb.press_loot()
                     self.log('Продолжаю бить моба')
 
                     wb.attack()
                     time.sleep(3)
 
                 time.sleep(0.3)
-                wb.press_loot()
-                time.sleep(1)
-                wb.press_loot()
+                # wb.press_loot()
+                # time.sleep(1)
+                # wb.press_loot()
         except Exception as e:
             self.log(f"Ошибка: {str(e)}")
         finally:

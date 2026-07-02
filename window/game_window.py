@@ -43,3 +43,39 @@ class GameWindow:
         if self.win:
             self.left = self.win.left
             self.top = self.win.top
+
+def is_game_active(partial_title="Avelon"):
+    """
+    Проверяет, активно ли окно игры в данный момент.
+    Возвращает True, если окно в фокусе, иначе False.
+    """
+    try:
+        active_window = gw.getActiveWindow()
+        if active_window is None:
+            return False
+
+        # Проверяем, содержит ли заголовок активного окна название игры
+        if partial_title.lower() in active_window.title.lower():
+            return True
+        else:
+            return False
+    except Exception:
+        return False
+
+if __name__ == "__main__":
+    # Создаём объект окна (partial_title можно поменять)
+    game = GameWindow(partial_title="Avelon Perfect World")   # или "Avelon", или часть имени окна
+
+    print("Пытаемся активировать окно игры...")
+
+    if game.activate():
+        print("\n=== Окно успешно активировано ===")
+        print(f"Заголовок окна : {game.win.title}")
+        print(f"Позиция        : left={game.left}, top={game.top}")
+        print(f"Размер         : width={game.width}, height={game.height}")
+        print(f"Центр экрана   : X={game.left + game.width // 2}, Y={game.top + game.height // 2}")
+
+        # Небольшая пауза, чтобы ты мог посмотреть
+        time.sleep(5)
+    else:
+        print("Не удалось найти окно. Проверь partial_title.")
