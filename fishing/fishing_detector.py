@@ -7,6 +7,7 @@ from datetime import datetime
 import os
 from fish_icon import click_fish_icon
 from window.game_window import GameWindow, is_game_active
+import random
 
 DEBUG_FOLDER = "debug_fishing"
 os.makedirs(DEBUG_FOLDER, exist_ok=True)
@@ -203,7 +204,7 @@ def check_fishing_state(window):
             indicator_history.clear()
         return False
 
-
+sleep_count = 0
 if __name__ == "__main__":
 
     from window.game_window import GameWindow
@@ -231,6 +232,11 @@ if __name__ == "__main__":
             if icon_pos:
                 # Иконка есть → значит рыбалка не активна, кликаем
                 print("[INFO] Иконка рыбы найдена. Кликаю...")
+                if sleep_count == 3:
+                    pause_rnd = random.randint(180, 300)
+                    time.sleep(pause_rnd)
+                    sleep_count = 0
+                sleep_count = sleep_count + 1
                 pyautogui.rightClick()
                 click_fish_icon(game)
                 pyautogui.doubleClick()
