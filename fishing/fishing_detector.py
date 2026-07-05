@@ -16,16 +16,94 @@ os.makedirs(DEBUG_FOLDER, exist_ok=True)
 current_success_zone = None
 indicator_history = []
 MAX_HISTORY = 6
+fishing_bar_region = None
+
+def capture_fishing_bar_once(window, template_path="image/region.png"):
+    """
+    Один раз захватывает координаты рыболовной полосы через Template Matching.
+    Сохраняет отладочные изображения.
+    """
+    global fishing_bar_region
+
+    try:
+        template = cv.imread(template_path, cv.IMREAD_GRAYSCALE)
+        if template is None:
+            print(f"[ERROR] Не удалось загрузить шаблон: {template_path}")
+            return False
+
+        game_left = window.left
+        game_top = window.top
+        game_width = window.width
+        game_height = window.height
+
+        with mss.MSS() as sct:
+            screenshot = sct.grab({
+                "left": game_left,
+                "top": game_top,
+                "width": game_width,
+                "height": game_height
+            })
+            img = np.array(screenshot)
+            img_gray = cv.cvtColor(img, cv.COLOR_BGRA2GRAY)
+
+        # Поиск шаблона
+        result = cv.matchTemplate(img_gray, template, cv.TM_CCOEFF_NORMED)
+        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+
+        print(f"[DEBUG] Поиск полосы | max_val = {max_val:.4f}")
+
+        # Сохраняем отладочное изображение поиска
+        debug_img = img.copy()
+        cv.rectangle(debug_img,
+                     (max_loc[0], max_loc[1]),
+                     (max_loc[0] + template.shape[1], max_loc[1] + template.shape[0]),
+                     (0, 255, 255), 2)
+
+        timestamp = datetime.now().strftime("%H%M%S")
+        cv.imwrite(os.path.join(DEBUG_FOLDER, f"search_area_{timestamp}.png"), debug_img)
+
+        # Если качество поиска хорошее — сохраняем координаты
+        if max_val >= 0.75:          # ← порог можно будет подкрутить
+            h, w = template.shape
+            left   = game_left + max_loc[0]
+            top    = game_top  + max_loc[1]
+            width  = w
+            height = h
+
+            fishing_bar_region = (left, top, width, height)
+
+            print(f"[INFO] Полоса успешно захвачена: {fishing_bar_region}")
+
+            # Сохраняем изображение с найденной полосой
+            found_img = img.copy()
+            cv.rectangle(found_img, (max_loc[0], max_loc[1]),
+                         (max_loc[0] + w, max_loc[1] + h), (0, 255, 0), 2)
+            cv.imwrite(os.path.join(DEBUG_FOLDER, f"found_bar_{timestamp}.png"), found_img)
+
+            return True
+        else:
+            print(f"[WARNING] Полоса найдена с низким качеством (max_val = {max_val:.4f})")
+            return False
+
+    except Exception as e:
+        print(f"[ERROR] Ошибка при захвате полосы: {e}")
+        return False
 
 
 def get_fishing_bar_region(window):
-    """Единый источник правды для региона рыболовной полосы"""
-    return (
-        window.left + 489,
-        window.top + 585,
-        505,
-        18
-    )
+    """Возвращает захваченные координаты полосы, если они есть"""
+    global fishing_bar_region
+
+    if fishing_bar_region is not None:
+        return fishing_bar_region
+    else:
+        # Fallback на старые координаты
+        return (
+            window.left + 489,
+            window.top + 585,
+            505,
+            18
+        )
 
 
 def analyze_fishing_bar(window):
@@ -210,7 +288,7 @@ if __name__ == "__main__":
     from window.game_window import GameWindow
     from fish_icon import click_fish_icon, find_fish_icon   # ← добавили find_fish_icon
 
-    game = GameWindow(partial_title="Avelon")
+    game = GameWindow(partial_title="ИмбирныйПряник")
     game.activate()
     time.sleep(1.5)
 
@@ -219,7 +297,7 @@ if __name__ == "__main__":
     try:
         while True:
             # Проверяем, активно ли окно игры
-            if not is_game_active("Avelon"):
+            if not is_game_active("ИмбирныйПряник"):
                 time.sleep(1)
                 continue
 
@@ -232,15 +310,23 @@ if __name__ == "__main__":
             if icon_pos:
                 # Иконка есть → значит рыбалка не активна, кликаем
                 print("[INFO] Иконка рыбы найдена. Кликаю...")
-                if sleep_count == 3:
-                    pause_rnd = random.randint(180, 300)
-                    time.sleep(pause_rnd)
-                    sleep_count = 0
+                # if sleep_count == 3:
+                #     pause_rnd = random.randint(180, 300)
+                #     time.sleep(pause_rnd)
+                #     sleep_count = 0
                 sleep_count = sleep_count + 1
                 pyautogui.rightClick()
                 click_fish_icon(game)
+
                 pyautogui.doubleClick()
-                time.sleep(1.6)          # даём время на заброс
+                game.activate()
+                pyautogui.moveTo(500, 500)
+                click_fish_icon(game)
+                pyautogui.doubleClick()
+                time.sleep(3)
+
+                capture_fishing_bar_once(game)
+                time.sleep(2)          # даём время на заброс
             else:
                 # Иконки нет → значит рыбалка активна, работаем с полосой
                 check_fishing_state(game)
